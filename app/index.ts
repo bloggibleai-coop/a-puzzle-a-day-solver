@@ -41,6 +41,7 @@ type Prefill = {
     weekday: number;
     puzzleType: PuzzleType;
     mode: Mode;
+    allowFlip: boolean | null;
 };
 
 let mode: Mode = "single";
@@ -157,6 +158,20 @@ function parseMode(raw: string | null): Mode | null {
     return null;
 }
 
+function parseBool(raw: string | null): boolean | null {
+    if (raw === null) {
+        return null;
+    }
+    const v = raw.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].indexOf(v) !== -1) {
+        return true;
+    }
+    if (["0", "false", "no", "off"].indexOf(v) !== -1) {
+        return false;
+    }
+    return null;
+}
+
 function parsePrefill(today: Date): Prefill {
     const params = new URLSearchParams(window.location.search);
     const puzzleType = parsePuzzleType(
@@ -167,8 +182,9 @@ function parsePrefill(today: Date): Prefill {
     const day = monthDay?.day ?? today.getDate();
     const weekday = parseWeekday(params.get("weekday") ?? params.get("w")) ?? today.getDay();
     const parsedMode = parseMode(params.get("mode"));
+    const allowFlip = parseBool(params.get("flip") ?? params.get("allow_flip") ?? params.get("allowFlip"));
 
-    return { month, day, weekday, puzzleType, mode: parsedMode ?? "single" };
+    return { month, day, weekday, puzzleType, mode: parsedMode ?? "single", allowFlip };
 }
 
 function getCurrentSelection(): { month: number; day: number; weekday: number; puzzleType: PuzzleType } {
@@ -673,6 +689,12 @@ function addOptions(prefill: Prefill) {
         p_form.add(opt);
     });
     p_form.selectedIndex = prefill.puzzleType;
+
+    // The checkbox defaults to checked in index.html; a `flip` URL parameter overrides it.
+    const flipToggle = <HTMLInputElement>document.getElementById(ALLOW_FLIP_TOGGLE_ID);
+    if (flipToggle && prefill.allowFlip !== null) {
+        flipToggle.checked = prefill.allowFlip;
+    }
 }
 
 function onChangePuzzleType() {

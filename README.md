@@ -17,6 +17,7 @@ You can prefill the web UI with query parameters.
 * `month` / `day` (1-based)
 * `type` (one of `dragonfjord`, `jarringwords`, `tetromino`, `weekday`, or `0-3`)
 * `weekday` (`sun`..`sat` or `0-6`, only used for `weekday` type)
+* `flip` (`1`/`0`; piece flipping is on by default)
 
 Examples:
 
