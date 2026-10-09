@@ -35,6 +35,18 @@ enum PuzzleType {
 
 type Mode = "single" | "all";
 
+// Only the puzzles sold by Nimble Beaver are offered in the UI. The enum values
+// above still match the solver's puzzle ids, so the chosen value is stored on
+// each <option> rather than inferred from its position.
+const OFFERED_PUZZLES: { type: PuzzleType; label: string }[] = [
+    { type: PuzzleType.WeekDay, label: "Nimble Beaver Puzzle A Day" },
+];
+const DEFAULT_PUZZLE_TYPE: PuzzleType = OFFERED_PUZZLES[0].type;
+
+function isOfferedPuzzle(t: PuzzleType): boolean {
+    return OFFERED_PUZZLES.some(p => p.type === t);
+}
+
 type Prefill = {
     month: number;
     day: number;
@@ -174,9 +186,10 @@ function parseBool(raw: string | null): boolean | null {
 
 function parsePrefill(today: Date): Prefill {
     const params = new URLSearchParams(window.location.search);
-    const puzzleType = parsePuzzleType(
+    const requestedType = parsePuzzleType(
         params.get("type") ?? params.get("puzzle") ?? params.get("puzzleType") ?? params.get("puzzle_type")
-    ) ?? PuzzleType.DragonFjord;
+    );
+    const puzzleType = requestedType !== null && isOfferedPuzzle(requestedType) ? requestedType : DEFAULT_PUZZLE_TYPE;
     const monthDay = parseMonthDay(params);
     const month = monthDay?.month ?? (today.getMonth() + 1);
     const day = monthDay?.day ?? today.getDate();
@@ -195,7 +208,8 @@ function getCurrentSelection(): { month: number; day: number; weekday: number; p
     const w_form =<HTMLSelectElement>document.getElementById(WEEKDAY_FORM_ID);
     const weekday = w_form.selectedIndex;
     const p_form =<HTMLSelectElement>document.getElementById(PUZZLE_TYPE_FORM_ID);
-    const puzzleType = p_form.selectedIndex as PuzzleType;
+    const parsed = parseInt(p_form.value, 10);
+    const puzzleType = (isNaN(parsed) ? DEFAULT_PUZZLE_TYPE : parsed) as PuzzleType;
 
     return { month, day, weekday, puzzleType };
 }
@@ -683,12 +697,13 @@ function addOptions(prefill: Prefill) {
     w_form.disabled = true;
 
     const p_form =<HTMLSelectElement>document.getElementById(PUZZLE_TYPE_FORM_ID);
-    ["DragonFjord's A-Puzzle-A-Day", "JarringWords's Calendar Puzzle", "TheRammer Puzzle Calendar", "WeekDay Calendar Puzzle"].forEach(typ => {
+    OFFERED_PUZZLES.forEach(puzzle => {
         const opt = document.createElement("option");
-        opt.text = typ;
+        opt.text = puzzle.label;
+        opt.value = puzzle.type.toString();
         p_form.add(opt);
     });
-    p_form.selectedIndex = prefill.puzzleType;
+    p_form.value = prefill.puzzleType.toString();
 
     // The checkbox defaults to checked in index.html; a `flip` URL parameter overrides it.
     const flipToggle = <HTMLInputElement>document.getElementById(ALLOW_FLIP_TOGGLE_ID);
@@ -700,7 +715,7 @@ function addOptions(prefill: Prefill) {
 function onChangePuzzleType() {
     const p_form =<HTMLSelectElement>document.getElementById(PUZZLE_TYPE_FORM_ID);
     const w_form =<HTMLSelectElement>document.getElementById(WEEKDAY_FORM_ID);
-    if (p_form.selectedIndex == PuzzleType.WeekDay) {
+    if (parseInt(p_form.value, 10) === PuzzleType.WeekDay) {
         w_form.disabled = false;
     } else {
         w_form.disabled = true;
